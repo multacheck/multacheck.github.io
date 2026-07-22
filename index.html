@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" id="theme-color-meta" content="#000000">
   <title>MultaCheck · Tumbar Fotomultas y Comparendos en Colombia</title>
   <meta name="description" content="Analiza tu fotomulta o comparendo gratis en 2 minutos. Si detectamos irregularidades legales, generamos tu Derecho de Petición y Tutela para impugnarla o tumbarla.">
   <meta name="robots" content="index, follow">
@@ -50,17 +51,36 @@
       --r: 14px;
       --rl: 20px;
       --ease: cubic-bezier(.22,1,.36,1);
+      /* Fondo real del "shell" (html/body) para que el rebote (overscroll bounce) de
+         Safari iOS revele el mismo color que la pantalla activa, no un gris/blanco ajeno */
+      --shell-dark: #000;
+      --shell-light: var(--bg);
     }
 
-    html, body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif; background: #e5e5ea; -webkit-font-smoothing: antialiased; }
+    /* Por defecto oscuro: coincide con el splash, que es lo primero que se pinta.
+       .content-active (agregada por JS a html Y body al ocultar el splash) lo cambia
+       al claro — debe ir en AMBOS: si html tiene background-color propio no transparente,
+       la spec de CSS usa el de html (no el de body) para pintar el canvas/viewport. */
+    html, body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
+      background-color: var(--shell-dark);
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+      height: 100%;
+    }
+    /* El sitio es un único color de fondo en todos los breakpoints — sin "marco" de
+       tarjeta en ningún ancho — así que este toggle aplica siempre, no solo en móvil. */
+    html.content-active, body.content-active { background-color: var(--shell-light); }
 
+    /* Sin max-width/centrado: 100% de ancho en cualquier tamaño de pantalla, sin
+       excepción — evita el hueco 431-639px donde antes quedaba centrada con
+       márgenes visibles (ver breakpoints de tablet/desktop, que ya eran frameless). */
     #app {
-      width: 100%; max-width: 430px; min-height: 100vh;
-      margin: 0 auto; background: var(--bg); position: relative;
-      box-shadow: 0 0 80px rgba(0,0,0,0.12);
+      width: 100%; min-height: 100vh; min-height: 100dvh;
+      background: var(--bg); position: relative;
     }
 
-    .screen { display: none; flex-direction: column; min-height: 100vh; }
+    .screen { display: none; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
     .screen.active { display: flex; }
 
     /* ── TYPOGRAPHY ── */
@@ -127,12 +147,12 @@
       background: linear-gradient(160deg, #1c1c1e 0%, #000 100%);
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      min-height: 100vh; text-align: center; padding: 40px;
+      min-height: 100vh; min-height: 100dvh; text-align: center; padding: 40px;
     }
     .splash-logo {
-      width: 112px; height: 112px; background: var(--white); border-radius: 28px;
+      width: 112px; height: 112px; background: #dcdce0; border-radius: 28px;
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 0 60px rgba(255,255,255,.16), 0 24px 48px rgba(0,0,0,.5);
+      box-shadow: 0 24px 48px rgba(0,0,0,.5);
       animation: logoIn .9s cubic-bezier(.34,1.56,.64,1) forwards;
       margin-bottom: 32px; overflow: hidden;
     }
@@ -147,6 +167,9 @@
 
     /* ── HOME ── */
     #home .scroll { padding: 32px 18px 48px; flex: 1; overflow-y: auto; }
+    /* Respiro entre el texto de la intro y los botones — en desktop se anula porque
+       ahí los CTA van en la columna derecha, alineados arriba con el título (grid). */
+    #home-ctas { margin-top: 28px; }
 
     .hero-logo {
       width: 58px; height: 58px; background: var(--white); border-radius: 16px;
@@ -339,33 +362,22 @@
     /* Solo una copia visible a la vez: en mobile/tablet manda #home-trust, en desktop #home-ctas-trust (ver breakpoint 960px) */
     #home-ctas-trust { display: none; }
 
-    @media (max-width: 430px) {
-      #app { box-shadow: none; }
-    }
-
-    #disclaimer {
-      padding: 14px 18px 20px; background: var(--bg); border-top: 1px solid var(--hairline);
-      font-size: 11px; color: #a1a1a6; line-height: 1.65; text-align: center;
-      max-width: 430px; margin: 0 auto;
-    }
-    @media (min-width: 640px) { #disclaimer { max-width: 600px; } }
-    @media (min-width: 960px) { #disclaimer { max-width: 100%; } }
-
     /* ══════════════════════════════════════════
        RESPONSIVE – TABLET  (≥ 640px)
     ══════════════════════════════════════════ */
     @media (min-width: 640px) {
-      html, body { background: #e5e5ea; }
-
+      /* Sin "marco" de maqueta: la tarjeta pasa a ocupar toda la pantalla, igual que
+         en desktop — el mismo --bg de fondo en html/body (arriba) hace que no haya
+         ninguna costura de color, solo contenido centrado como un sitio web normal. */
       #app {
-        max-width: 600px;
-        border-radius: 24px;
-        margin: 32px auto;
-        min-height: auto;
-        overflow: hidden;
+        max-width: 100%;
+        border-radius: 0;
+        margin: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
       }
 
-      #splash { border-radius: 24px; }
+      #splash { border-radius: 0; }
 
       h1 { font-size: 36px; }
       h2 { font-size: 24px; }
@@ -379,6 +391,20 @@
       #checklist .bottom-bar { padding-left: 28px; padding-right: 28px; }
       #result .bottom-bar { padding-left: 28px; padding-right: 28px; }
 
+      /* Contenido centrado con ancho de lectura cómodo — sin esto, a 900px de ancho
+         el texto se estiraría de borde a borde, que se ve poco cuidado. */
+      #home .scroll, #type-selector .scroll, #checklist .body,
+      #petition .scroll, #verification .scroll, #result .scroll {
+        max-width: 720px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #checklist .bottom-bar > *, #result .bottom-bar > * {
+        max-width: 640px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
       .q-card { padding: 30px; }
       .q-text { font-size: 22px; }
 
@@ -391,17 +417,6 @@
        RESPONSIVE – DESKTOP  (≥ 960px)
     ══════════════════════════════════════════ */
     @media (min-width: 960px) {
-      html, body { background: var(--bg); }
-
-      #app {
-        max-width: 100%;
-        border-radius: 0;
-        margin: 0;
-        min-height: 100vh;
-      }
-
-      #splash { border-radius: 0; }
-
       /* ── HOME: two-column layout ── */
       #home .scroll {
         max-width: 1100px;
@@ -424,20 +439,13 @@
 
       h1 { font-size: 44px; letter-spacing: -1.5px; }
 
-      /* ── FLOW SCREENS: narrow centered column on wide canvas ── */
+      /* ── FLOW SCREENS: el ancho de lectura (720px/640px) ya lo fija el breakpoint
+         de tablet de arriba; acá solo se amplía el padding lateral. ── */
       #type-selector .scroll,
       #checklist .body,
       #petition .scroll,
-      #verification .scroll {
-        max-width: 720px;
-        margin: 0 auto;
-        padding-left: 40px;
-        padding-right: 40px;
-      }
-
+      #verification .scroll,
       #result .scroll {
-        max-width: 720px;
-        margin: 0 auto;
         padding-left: 40px;
         padding-right: 40px;
       }
@@ -446,12 +454,6 @@
       #result .bottom-bar {
         padding-left: 40px;
         padding-right: 40px;
-      }
-      #checklist .bottom-bar > *,
-      #result .bottom-bar > * {
-        max-width: 640px;
-        margin-left: auto;
-        margin-right: auto;
       }
 
       .app-bar {
@@ -478,8 +480,10 @@
       #home-trust { display: none; }
       #home-ctas-trust { display: flex; }
 
-      /* Quitar margin-top del how-it-works ya que está en grid */
+      /* Quitar margin-top de how-it-works y de los CTA ya que están en grid,
+         alineados arriba junto al título de la columna izquierda */
       #home-how { margin-top: 0 !important; }
+      #home-ctas { margin-top: 0; }
 
       /* ── TYPE SELECTOR: side-by-side cards ── */
       #type-selector .cards-grid {
@@ -786,11 +790,6 @@
   </div>
 
 </div><!-- #app -->
-
-<!-- ══ DISCLAIMER ════════════════════════════════════ -->
-<div id="disclaimer">
-  MultaCheck genera documentos de reclamación de derechos basados en la normativa colombiana vigente (Ley 769/2002, Ley 1843/2017, CPACA). No constituye asesoría jurídica formal ni reemplaza la consulta con un abogado especializado. Para casos complejos, consulta un profesional del derecho. © 2026 MultaCheck.
-</div>
 
 <!-- ══ SNACKBAR ═══════════════════════════════════════ -->
 <div id="snackbar">
@@ -1317,6 +1316,16 @@ function showScreen(id) {
   if (el) { el.classList.add('active'); window.scrollTo(0, 0); }
 }
 
+// Oculta el splash y sincroniza el fondo del shell (html/body) y el theme-color
+// de la barra de estado con el estado claro del contenido (ver var(--shell-light)).
+function hideSplash() {
+  document.getElementById('splash').style.display = 'none';
+  document.documentElement.classList.add('content-active');
+  document.body.classList.add('content-active');
+  const themeColorMeta = document.getElementById('theme-color-meta');
+  if (themeColorMeta) themeColorMeta.setAttribute('content', '#f5f5f7');
+}
+
 // ════════════════════════════════════════════════════════
 // CHECKLIST
 // ════════════════════════════════════════════════════════
@@ -1444,7 +1453,11 @@ function renderResult() {
             <div style="font-size:12px;color:var(--text2)">Basa tu impugnación en estos argumentos</div>
           </div>
         </div>
-        ${motivos.map((m,i) => `<div class="motivo-row"><div class="motivo-num">${i+1}</div><div class="motivo-text">${m}</div></div>`).join('')}
+        <div style="text-align:center;padding:14px 8px 4px">
+          <div style="font-size:36px;font-weight:800;letter-spacing:-0.02em">${motivos.length}</div>
+          <div style="font-size:13px;color:var(--text2);margin-top:2px">${motivos.length===1?'motivo legal detectado':'motivos legales detectados'}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:12px;line-height:1.5">Genera tus documentos legales para ver el detalle de cada motivo y su base jurídica.</div>
+        </div>
       </div>
       <div style="background:var(--danger-bg);border-radius:var(--r);border:1px solid rgba(215,0,21,.2);padding:14px 16px;display:flex;gap:12px;margin-top:14px;align-items:flex-start">
         <span style="font-size:20px;flex-shrink:0;line-height:1.2">⏰</span>
@@ -1557,7 +1570,7 @@ function renderPetition() {
       </div>
       <span style="font-size:15px;font-weight:700">Motivos de impugnación (${motivos.length})</span>
     </div>
-    ${motivos.map((m,i) => `<div style="display:flex;gap:9px;margin-bottom:6px"><div style="width:6px;height:6px;background:var(--warning);border-radius:50%;margin-top:8px;flex-shrink:0"></div><div style="font-size:13px;line-height:1.5">${m}</div></div>`).join('')}
+    <div style="font-size:13px;color:var(--text2);line-height:1.5">${motivos.length===1?'Este motivo y su':'Estos motivos y su'} base legal completa se incluyen en el documento una vez lo generes.</div>
   </div>`;
 
   if (!S.formSubmitted) {
@@ -2031,7 +2044,7 @@ async function init() {
     const restored = restoreState();
 
     // Ocultar splash de inmediato y mostrar pantalla de documentos
-    document.getElementById('splash').style.display = 'none';
+    hideSplash();
 
     if (restored && S.result?.motivos?.length) {
       showScreen('petition');
@@ -2077,7 +2090,7 @@ async function init() {
 
   // ── Inicio normal ────────────────────────────────────
   setTimeout(() => {
-    document.getElementById('splash').style.display = 'none';
+    hideSplash();
     showScreen('home');
   }, 1800);
 }
