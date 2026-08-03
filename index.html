@@ -1846,7 +1846,11 @@ function renderPetition() {
     <div class="card card-p" style="margin-bottom:26px">
       <div class="form-grid-2">
         <div class="field"><label>Número de comparendo *</label><input id="fco" placeholder="Ej: 12345678" value="${esc(S.form.comparendo||'')}"></div>
-        <div class="field"><label>Entidad emisora *</label><input id="fent" value="${esc(S.form.entidad||'Secretaría de Movilidad')}"></div>
+        <div class="field">
+          <label>Entidad emisora *</label>
+          <input id="fent" value="${esc(S.form.entidad||'Secretaría de Movilidad')}">
+          <div style="font-size:11px;color:var(--text2);margin-top:5px;line-height:1.4">Está en la carta o el correo de tu fotomulta (ej. "Secretaría de Movilidad de Medellín"). Si no la tienes, <a href="https://www.fcm.org.co/simit/" target="_blank" rel="noopener">consúltala gratis en SIMIT</a>.</div>
+        </div>
         <div class="field" style="margin-bottom:0"><label>Fecha del comparendo *</label><input id="ffec" type="date" value="${esc(S.form.fecha||'')}"></div>
       </div>
     </div>
@@ -2410,7 +2414,11 @@ function renderDevolucion() {
         <div class="field"><label>Ciudad / organismo *</label><input id="dvci" placeholder="Ej: Medellín" value="${esc(SDEV.form.ciudad||'')}"></div>
         <div class="field"><label>Fecha de la fotomulta *</label><input id="dvfec" type="date" value="${esc(SDEV.form.fecha||'')}"></div>
         <div class="field"><label>Número de comparendo *</label><input id="dvco" placeholder="Ej: 12345678" value="${esc(SDEV.form.comparendo||'')}"></div>
-        <div class="field" style="margin-bottom:0"><label>Entidad emisora *</label><input id="dvent" value="${esc(SDEV.form.entidad||'Secretaría de Movilidad')}"></div>
+        <div class="field" style="margin-bottom:0">
+          <label>Entidad emisora *</label>
+          <input id="dvent" value="${esc(SDEV.form.entidad||'Secretaría de Movilidad')}">
+          <div style="font-size:11px;color:var(--text2);margin-top:5px;line-height:1.4">Está en la carta o el correo de tu fotomulta (ej. "Secretaría de Movilidad de Medellín"). Si no la tienes, <a href="https://www.fcm.org.co/simit/" target="_blank" rel="noopener">consúltala gratis en SIMIT</a>.</div>
+        </div>
       </div>
     </div>
     <button class="btn btn-black btn-lg" onclick="checkDevEligibility()">Verificar si aplica — gratis</button>
