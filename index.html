@@ -2235,6 +2235,12 @@ function restoreDevState() {
   } catch(e) { console.warn('restoreDevState:', e); return false; }
 }
 
+// Embudo de la feature de devolución en GA4 — reusa la misma propiedad/cookie
+// que ya carga la página (ver <head>), no agrega ningún tracker nuevo.
+function trackDev(name, params) {
+  if (typeof gtag !== 'undefined') gtag('event', name, params || {});
+}
+
 function openDevolucion() {
   Object.assign(SDEV, {
     checked: false, eligible: false, organismo: null, formSubmitted: false,
@@ -2242,6 +2248,7 @@ function openDevolucion() {
   });
   renderDevolucion();
   showScreen('devolucion');
+  trackDev('dev_view');
 }
 
 function checkDevEligibility() {
@@ -2257,6 +2264,7 @@ function checkDevEligibility() {
   SDEV.organismo = organismo;
   saveDevState();
   renderDevolucion();
+  trackDev('dev_eligibility_check', { eligible: SDEV.eligible, ciudad: v.ciudad });
 }
 
 function resetDevCheck() {
@@ -2283,7 +2291,9 @@ async function submitDevForm() {
   SDEV.baseId       = baseId(d.cedula, d.comparendo);
   SDEV.formSubmitted = true;
   saveDevState();
+  trackDev('dev_form_submitted');
   await checkDevPaid();
+  if (!SDEV.paid) trackDev('dev_paywall_view');
 }
 
 async function checkDevPaid() {
