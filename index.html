@@ -320,6 +320,9 @@
     /* ── VERIFICATION ── */
     #verification .scroll { flex: 1; padding: 20px 18px 40px; overflow-y: auto; }
 
+    /* ── DEVOLUCIÓN ── */
+    #devolucion .scroll { flex: 1; padding: 20px 18px 40px; overflow-y: auto; }
+
     /* ── ANIMATIONS ── */
     @keyframes logoIn { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -389,7 +392,7 @@
       h2 { font-size: 24px; }
 
       .scroll, #home .scroll, #type-selector .scroll,
-      #petition .scroll, #verification .scroll { padding-left: 28px; padding-right: 28px; }
+      #petition .scroll, #verification .scroll, #devolucion .scroll { padding-left: 28px; padding-right: 28px; }
 
       .app-bar { padding: 16px 28px; }
       .progress-wrap { padding-left: 28px; padding-right: 28px; }
@@ -400,7 +403,7 @@
       /* Contenido centrado con ancho de lectura cómodo — sin esto, a 900px de ancho
          el texto se estiraría de borde a borde, que se ve poco cuidado. */
       #home .scroll, #type-selector .scroll, #checklist .body,
-      #petition .scroll, #verification .scroll, #result .scroll {
+      #petition .scroll, #verification .scroll, #result .scroll, #devolucion .scroll {
         max-width: 720px;
         margin-left: auto;
         margin-right: auto;
@@ -451,7 +454,8 @@
       #checklist .body,
       #petition .scroll,
       #verification .scroll,
-      #result .scroll {
+      #result .scroll,
+      #devolucion .scroll {
         padding-left: 40px;
         padding-right: 40px;
       }
@@ -2401,7 +2405,7 @@ function renderDevolucion() {
   if (!SDEV.checked) {
     h += `<div class="section-title">Datos de tu fotomulta</div>
     <div class="section-sub">Para verificar gratis si tu caso está cubierto</div>
-    <div class="card card-p" style="margin-bottom:22px">
+    <div class="card card-p" style="margin-bottom:26px">
       <div class="form-grid-2">
         <div class="field"><label>Ciudad / organismo *</label><input id="dvci" placeholder="Ej: Medellín" value="${esc(SDEV.form.ciudad||'')}"></div>
         <div class="field"><label>Fecha de la fotomulta *</label><input id="dvfec" type="date" value="${esc(SDEV.form.fecha||'')}"></div>
@@ -2430,7 +2434,7 @@ function renderDevolucion() {
 
   } else if (!SDEV.formSubmitted) {
     const o = SDEV.organismo;
-    h += `<div class="card card-p" style="border:1.5px solid var(--success);margin-bottom:22px">
+    h += `<div class="card card-p" style="border:1.5px solid var(--success);margin-bottom:26px">
       <div style="display:flex;align-items:center;gap:11px;margin-bottom:10px">
         <div style="background:var(--success-bg);padding:9px;border-radius:10px;flex-shrink:0">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
