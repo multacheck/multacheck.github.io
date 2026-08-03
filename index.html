@@ -629,6 +629,11 @@
           Verificar en SIMIT y RUNT
         </button>
 
+        <button class="btn btn-outline" style="margin-top:9px;border-radius:13px;border-color:var(--success);color:var(--success)" onclick="openDevolucion()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v2m0 8v2M9.5 9.5a2.5 2 0 0 1 2.5-1.5c1.4 0 2.5.7 2.5 1.8s-1 1.7-2.5 2-2.5.9-2.5 2 1.1 1.8 2.5 1.8a2.5 2 0 0 0 2.5-1.5"/></svg>
+          ¿Ya pagaste? Verifica tu devolución
+        </button>
+
         <!-- Trust badge (repetida en columna derecha en desktop, oculta en mobile/tablet — ver #home-ctas-trust) -->
         <div id="home-ctas-trust" class="trust-badge" style="margin-top:20px">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" style="flex-shrink:0;margin-top:2px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -799,6 +804,17 @@
     <div class="scroll" id="verif-scroll"></div>
   </div>
 
+  <!-- ══ DEVOLUCIÓN DE DINERO ══════════════════════════ -->
+  <div id="devolucion" class="screen">
+    <div class="app-bar">
+      <button class="back-btn" onclick="showScreen('home')">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <span class="title">Devolución de tu dinero</span>
+    </div>
+    <div class="scroll" id="dev-scroll"></div>
+  </div>
+
 </div><!-- #app -->
 
 <!-- ══ SNACKBAR ═══════════════════════════════════════ -->
@@ -813,8 +829,8 @@
     <div class="dialog-spinner" id="pay-dialog-spinner"></div>
     <h3 style="font-size:19px;font-weight:800" id="pay-dialog-title">Verificando pago...</h3>
     <p style="color:var(--text2);margin-top:8px;line-height:1.5;font-size:13px" id="pay-dialog-msg">Completa el pago en la ventana que se abrió. Cuando se confirme, tu documento estará disponible aquí de forma automática.</p>
-    <button class="btn btn-black" style="margin-top:20px;height:44px;font-size:13px" onclick="manualVerify()">✅ Ya pagué · Verificar ahora</button>
-    <button class="btn btn-outline" style="margin-top:10px;height:40px;font-size:13px" onclick="cancelPoll()">Cancelar</button>
+    <button class="btn btn-black" style="margin-top:20px;height:44px;font-size:13px" onclick="dlgManualVerify()">✅ Ya pagué · Verificar ahora</button>
+    <button class="btn btn-outline" style="margin-top:10px;height:40px;font-size:13px" onclick="dlgCancelPoll()">Cancelar</button>
   </div>
 </div>
 
@@ -826,6 +842,7 @@ const WPUB        = 'pub_prod_tqn4zCtGG0t3vX5W14h0oiwYexafD9aV';
 const WORKER_URL  = 'https://multacheck-worker.santiagolopez182002.workers.dev';
 const PRICE_DOC    = 30000;
 const PRICE_BUNDLE = 50000;
+const PRICE_DEV     = 30000; // Derecho de Petición de devolución de dinero (mismo precio que un documento individual)
 
 function fmtPrice(n) {
   return '$' + n.toLocaleString('es-CO') + ' COP';
@@ -836,31 +853,78 @@ function fmtPrice(n) {
 // El Ministerio de Transporte y la Superintendencia de Transporte
 // investigaron 37 organismos de tránsito por imponer fotomultas sin el
 // "concepto de desempeño" metrológico del INM exigido por la Res. 718/2018
-// y la Ley 2251 de 2022. Ventana pública más amplia conocida: 10-dic-2018
-// a 21-nov-2024 (el rango exacto varía por organismo; no hay un listado
-// oficial único aún, por eso esto se muestra como alerta a verificar,
-// nunca como garantía).
+// y la Ley 2251 de 2022. De 5,8 millones de fotomultas sin validez,
+// ~1.582.398 ya habían sido pagadas (~$1,05 billones) — ver flujo de
+// devolución de dinero más abajo.
+//
+// Cada organismo tiene SU PROPIA fecha de corte (no un rango único: p.ej.
+// Medellín solo hasta abr-2020, Bogotá solo hasta ene-2020, mientras que
+// Cali o Cúcuta llegan hasta nov-2024). Tabla extraída de cobertura de
+// prensa (Infobae, 21-may-2026) del PDF "ORGANISMO DE TRANSITO QUE OPERAN
+// SAST" de Supertransporte — dos puntos (Bogotá, Cali) se cruzaron de forma
+// independiente contra v12magazine.com y coincidieron exactamente, pero no
+// se ha verificado contra el PDF oficial primario. Por eso el flujo sigue
+// mostrando esto como una señal a verificar, nunca como garantía.
+// Limitación conocida: los organismos departamentales (Cundinamarca,
+// Valle del Cauca, Atlántico, Magdalena) cubren varios municipios, pero el
+// match aquí es por texto de ciudad — un usuario que escriba el nombre del
+// municipio (no del departamento) no hará match con esas filas.
 // Fuente: mintransporte.gov.co/publicaciones/12348 (19-may-2026)
 // ════════════════════════════════════════════════════════
-const REVOCATORIA_DESDE    = '2018-12-10';
-const REVOCATORIA_HASTA    = '2024-11-21';
-const REVOCATORIA_CIUDADES = [
-  'bogota','medellin','cali','barranquilla','cartagena','bucaramanga',
-  'villavicencio','cucuta','santa marta','monteria','sincelejo','valledupar',
-  'popayan','palmira','zipaquira','sabaneta','yumbo','soledad',
-  'villa del rosario','barrancabermeja','turbaco','puerto colombia',
-  'cartago','yotoco','aguachica','planeta rica','santander de quilichao',
+const REVOCATORIA_ORGANISMOS = [
+  { ciudad: 'medellin',               desde: '2018-12-10', hasta: '2020-04-28' },
+  { ciudad: 'la dorada',              desde: '2018-12-10', hasta: '2019-09-03' },
+  { ciudad: 'villavicencio',          desde: '2018-12-10', hasta: '2019-10-20' },
+  { ciudad: 'cali',                   desde: '2018-12-10', hasta: '2024-11-21' },
+  { ciudad: 'bogota',                 desde: '2018-12-12', hasta: '2020-01-06' },
+  { ciudad: 'barranquilla',           desde: '2018-12-27', hasta: '2019-09-17' },
+  { ciudad: 'corozal',                desde: '2018-12-18', hasta: '2019-07-24' },
+  { ciudad: 'villa del rosario',      desde: '2019-01-14', hasta: '2019-10-31' },
+  { ciudad: 'itagui',                 desde: '2019-02-01', hasta: '2020-07-05' },
+  { ciudad: 'sabaneta',               desde: '2019-02-01', hasta: '2024-11-21' },
+  { ciudad: 'magdalena',              desde: '2019-02-01', hasta: '2019-08-29' },
+  { ciudad: 'bello',                  desde: '2019-02-27', hasta: '2020-02-16' },
+  { ciudad: 'galapa',                 desde: '2019-02-27', hasta: '2019-09-15' },
+  { ciudad: 'atlantico',              desde: '2019-02-27', hasta: '2019-08-12' },
+  { ciudad: 'puerto colombia',        desde: '2019-02-27', hasta: '2019-11-25' },
+  { ciudad: 'arjona',                 desde: '2019-02-27', hasta: '2019-12-19' },
+  { ciudad: 'turbaco',                desde: '2019-03-26', hasta: '2019-11-28' },
+  { ciudad: 'soledad',                desde: '2019-03-26', hasta: '2019-12-09' },
+  { ciudad: 'cucuta',                 desde: '2019-03-26', hasta: '2024-11-21' },
+  { ciudad: 'cundinamarca',           desde: '2019-04-30', hasta: '2024-11-21' },
+  { ciudad: 'palermo',                desde: '2019-04-29', hasta: '2024-11-21' },
+  { ciudad: 'fundacion',              desde: '2019-05-10', hasta: '2024-11-21' },
+  { ciudad: 'los patios',             desde: '2019-05-10', hasta: '2024-11-21' },
+  { ciudad: 'cartago',                desde: '2019-05-24', hasta: '2024-11-21' },
+  { ciudad: 'yumbo',                  desde: '2019-07-08', hasta: '2024-11-21' },
+  { ciudad: 'yotoco',                 desde: '2019-07-08', hasta: '2024-11-21' },
+  { ciudad: 'cienaga',                desde: '2019-08-08', hasta: '2021-05-26' },
+  { ciudad: 'barrancabermeja',        desde: '2019-09-20', hasta: '2024-11-21' },
+  { ciudad: 'santa marta',            desde: '2019-11-15', hasta: '2024-11-21' },
+  { ciudad: 'popayan',                desde: '2019-11-20', hasta: '2024-11-21' },
+  { ciudad: 'aguachica',              desde: '2019-11-28', hasta: '2024-11-21' },
+  { ciudad: 'monteria',               desde: '2019-12-13', hasta: '2024-12-12' },
+  { ciudad: 'planeta rica',           desde: '2020-01-14', hasta: '2025-01-13' },
+  { ciudad: 'palmira',                desde: '2020-05-22', hasta: '2025-05-21' },
+  { ciudad: 'santander de quilichao', desde: '2020-07-21', hasta: '2025-07-20' },
+  { ciudad: 'valle del cauca',        desde: '2021-02-12', hasta: '2026-02-11' },
+  { ciudad: 'zipaquira',              desde: '2020-12-16', hasta: '2025-12-15' },
 ];
 
 function normTxt(s) {
   return (s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').trim();
 }
 
+// Devuelve el registro del organismo cuya ventana cubre esta ciudad+fecha, o null.
+function organismoRevocatoriaPara(ciudad, fecha) {
+  if (!ciudad || !fecha) return null;
+  const c = normTxt(ciudad);
+  return REVOCATORIA_ORGANISMOS.find(o => c.includes(o.ciudad) && fecha >= o.desde && fecha <= o.hasta) || null;
+}
+
 function esFotomultaEnVentanaRevocatoria(d) {
   if (S.type !== 'fotomulta' || !d.fecha) return false;
-  if (d.fecha < REVOCATORIA_DESDE || d.fecha > REVOCATORIA_HASTA) return false;
-  const c = normTxt(d.ciudad);
-  return REVOCATORIA_CIUDADES.some(known => c.includes(known));
+  return !!organismoRevocatoriaPara(d.ciudad, d.fecha);
 }
 
 // ════════════════════════════════════════════════════════
@@ -954,6 +1018,25 @@ const S = {
   paying: false,
   revocatoriaEligible: false, // podría estar cubierto por la revocatoria masiva de fotomultas
   revocatoriaAck: false,      // el usuario ya vio la alerta y decidió continuar de todas formas
+};
+
+// ════════════════════════════════════════════════════════
+// STATE — flujo de devolución de dinero (fotomultas ya pagadas)
+// Deliberadamente separado de S para no arriesgar el flujo de
+// petición/tutela/bundle que ya genera ingresos.
+// ════════════════════════════════════════════════════════
+const SDEV = {
+  form: {},            // ciudad, fecha, comparendo, entidad, nombre, cedula, direccion, telefono, email, montoPagado, fechaPago
+  checked: false,      // ya corrió el chequeo gratuito de elegibilidad
+  eligible: false,
+  organismo: null,     // { ciudad, desde, hasta } del organismo que hizo match
+  formSubmitted: false,// ya completó el formulario completo (tras salir elegible)
+  baseId: null,
+  paid: false,
+  doc: null,           // Derecho de Petición de devolución (solo tras pago confirmado)
+  docIncump: null,     // Queja por incumplimiento de términos (solo tras pago confirmado)
+  paying: false,
+  pendingDocId: null,
 };
 
 // ════════════════════════════════════════════════════════
@@ -1164,6 +1247,141 @@ Anexos: (Evidencias que soportan los hechos y fundamentos jurídicos aquí expue
 }
 
 // ════════════════════════════════════════════════════════
+// DOCUMENTOS — DEVOLUCIÓN DE DINERO (fotomultas ya pagadas,
+// dentro de la revocatoria masiva de mayo 2026)
+// ════════════════════════════════════════════════════════
+function fmtDateISO(iso) {
+  return iso ? fmtDate(new Date(iso + 'T00:00:00')) : '';
+}
+
+function genDevolucion(d) {
+  const fecha = fmtDate(new Date());
+  const fechaComparendo = fmtDateISO(d.fecha);
+  const fechaPago       = fmtDateISO(d.fechaPago);
+  const monto           = fmtPrice(Number(String(d.montoPagado).replace(/\D/g,'')) || 0);
+  return `${d.ciudad}, ${fecha}
+
+Señores
+${d.entidad.toUpperCase()}
+Área Jurídica y de Impugnaciones
+${d.ciudad}
+
+Con copia a: Superintendencia de Transporte
+
+ASUNTO: Derecho de Petición – Solicitud de REVOCATORIA DIRECTA y DEVOLUCIÓN DE DINERO respecto del comparendo No. ${d.comparendo}
+
+Respetados señores:
+
+Yo, ${d.nombre.toUpperCase()}, identificado(a) con cédula de ciudadanía No. ${d.cedula}, domiciliado(a) en ${d.direccion}, teléfono ${d.telefono}, correo electrónico ${d.email}, actuando en nombre propio y en ejercicio del derecho fundamental de petición consagrado en el artículo 23 de la Constitución Política y desarrollado por la Ley 1755 de 2015, presento solicitud de REVOCATORIA DIRECTA del comparendo No. ${d.comparendo} y DEVOLUCIÓN de la suma pagada por dicho concepto, con fundamento en los siguientes:
+
+I. HECHOS
+
+1. El día ${fechaComparendo}, ${d.entidad.toUpperCase()} me impuso el comparendo No. ${d.comparendo} mediante un sistema automático de detección electrónica (fotomulta), operado en ${d.ciudad}.
+
+2. El día ${fechaPago} pagué la suma de ${monto} por concepto de dicho comparendo.
+
+3. El Ministerio de Transporte y la Superintendencia de Transporte anunciaron públicamente (comunicado del 19 de mayo de 2026) que ${d.entidad.toUpperCase()} se encuentra entre los 37 organismos de tránsito investigados por operar sistemas automáticos de detección sin contar con el "concepto de desempeño" metrológico del Instituto Nacional de Metrología (INM), exigido por la Resolución 718 de 2018 del Ministerio de Transporte y la Ley 2251 de 2022, durante el período que cubre la fecha de mi comparendo.
+
+4. Como consecuencia de esa investigación, el Gobierno Nacional anunció la revocatoria de más de 5,8 millones de comparendos impuestos en esas condiciones, de los cuales aproximadamente 1.582.398 ya habían sido pagados por los ciudadanos, por un valor superior a $1,05 billones de pesos.
+
+5. Al no contar el sistema que originó mi comparendo con la autorización exigida por la ley para la fecha de los hechos, el acto administrativo sancionatorio es nulo desde su origen, y la suma que pagué constituye un pago de lo no debido.
+
+II. PETICIONES
+
+1. Que se REVOQUE DIRECTAMENTE el comparendo No. ${d.comparendo}, de conformidad con el artículo 93 del CPACA, por carecer de fundamento legal el sistema que lo originó.
+2. Que se ORDENE LA DEVOLUCIÓN de la suma de ${monto}, pagada el ${fechaPago}, por concepto de pago de lo no debido (artículos 2313 y siguientes del Código Civil), debidamente actualizada con base en la variación del Índice de Precios al Consumidor (IPC) certificado por el DANE entre la fecha de pago y la fecha de la devolución efectiva, más los intereses corrientes bancarios certificados por la Superintendencia Financiera de Colombia sobre dicho período.
+3. Que se informe por escrito el procedimiento y el plazo en que se hará efectiva dicha devolución.
+4. Que se me suministre COPIA ÍNTEGRA del expediente administrativo, incluyendo el comprobante o certificación del concepto de desempeño del INM vigente para la fecha de los hechos, o la constancia de su ausencia.
+5. Que se certifique si el comparendo No. ${d.comparendo} se encuentra incluido dentro del proceso de revocatoria masiva anunciado por el Ministerio de Transporte y la Superintendencia de Transporte.
+
+III. FUNDAMENTOS JURÍDICOS
+
+- Artículo 23 de la Constitución Política y Ley 1755 de 2015: derecho de petición; la entidad cuenta con quince (15) días hábiles para resolver.
+- Resolución 718 de 2018, Ministerio de Transporte, y Ley 2251 de 2022: exigen que los sistemas automáticos de detección electrónica cuenten con el concepto de desempeño metrológico del INM para poder operar e imponer sanciones válidas.
+- Comunicado conjunto del Ministerio de Transporte y la Superintendencia de Transporte del 19 de mayo de 2026, que identifica a ${d.entidad.toUpperCase()} entre los organismos investigados por incumplir dicho requisito.
+- Artículo 93 del CPACA (Ley 1437 de 2011): procedencia de la revocatoria directa de actos administrativos, en cualquier tiempo, cuando resulten manifiestamente contrarios a la ley.
+- Artículos 2313 y siguientes del Código Civil: repetición del pago de lo no debido.
+- Principio de proscripción del enriquecimiento sin justa causa por parte de la administración pública.
+- Artículo 29 de la Constitución Política: debido proceso, vulnerado al haberse sancionado con base en un sistema no autorizado.
+
+IV. SOLICITUD DE PRUEBAS
+
+- Comprobante de pago del comparendo No. ${d.comparendo}, que se anexa a la presente.
+- Certificación del concepto de desempeño metrológico del INM correspondiente al sistema de detección que impuso el comparendo, vigente a la fecha de los hechos.
+- Copia del comunicado del Ministerio de Transporte y la Superintendencia de Transporte del 19 de mayo de 2026, que se anexa como indicio de la irregularidad alegada.
+
+V. DECLARACIÓN JURADA
+
+Manifiesto, bajo la gravedad del juramento, que la información y las fechas aquí consignadas corresponden a la realidad de los hechos.
+
+VI. NOTIFICACIONES
+
+Dirección: ${d.direccion}
+Correo electrónico: ${d.email}
+Teléfono: ${d.telefono}
+
+Atentamente,
+
+${d.nombre.toUpperCase()}
+C.C. ${d.cedula}
+Anexos: Comprobante de pago; comunicado oficial de Supertransporte/MinTransporte (19-may-2026)
+
+—
+Copia: Superintendencia de Transporte, para su conocimiento en el marco de la investigación adelantada contra los organismos de tránsito señalados en el comunicado del 19 de mayo de 2026.`;
+}
+
+function genIncumplimiento(d) {
+  const fecha = fmtDate(new Date());
+  return `${d.ciudad}, ${fecha}
+
+Señores
+PROCURADURÍA GENERAL DE LA NACIÓN / PERSONERÍA DE ${d.ciudad.toUpperCase()}
+Quejas y Denuncias contra Servidores Públicos
+
+ASUNTO: Queja por incumplimiento de los términos legales para resolver un Derecho de Petición – ${d.entidad.toUpperCase()} – Comparendo No. ${d.comparendo}
+
+Respetados señores:
+
+Yo, ${d.nombre.toUpperCase()}, identificado(a) con cédula de ciudadanía No. ${d.cedula}, domiciliado(a) en ${d.direccion}, teléfono ${d.telefono}, correo electrónico ${d.email}, presento QUEJA DISCIPLINARIA por el incumplimiento de los términos legales para resolver un derecho de petición, con fundamento en los siguientes:
+
+I. HECHOS
+
+1. El día [COMPLETA LA FECHA EN QUE RADICASTE TU PETICIÓN], radiqué ante ${d.entidad.toUpperCase()} un Derecho de Petición solicitando la revocatoria directa del comparendo No. ${d.comparendo} y la devolución de la suma que pagué por dicho concepto, identificado con el radicado No. [COMPLETA EL NÚMERO DE RADICADO QUE TE DIERON].
+
+2. A la fecha de esta queja, han transcurrido más de quince (15) días hábiles desde la radicación, sin que la entidad haya emitido respuesta de fondo.
+
+3. Esta omisión desconoce el deber legal de resolver las peticiones dentro del término establecido por el artículo 14 de la Ley 1755 de 2015.
+
+II. PETICIONES
+
+1. Que se investigue disciplinariamente al funcionario o funcionarios responsables de resolver mi petición, por el eventual incumplimiento de sus deberes funcionales (Ley 1952 de 2019, Código General Disciplinario).
+2. Que se requiera a ${d.entidad.toUpperCase()} para que dé respuesta inmediata y de fondo a mi Derecho de Petición.
+3. Que se me informe el número de expediente asignado a esta queja y su estado.
+
+III. FUNDAMENTOS JURÍDICOS
+
+- Artículo 14 de la Ley 1755 de 2015: término de quince (15) días hábiles para resolver peticiones.
+- Artículo 23 de la Constitución Política: derecho fundamental de petición.
+- Ley 1952 de 2019 (Código General Disciplinario): deber funcional de los servidores públicos de resolver oportunamente las solicitudes ciudadanas.
+
+IV. DECLARACIÓN JURADA
+
+Manifiesto, bajo la gravedad del juramento, que la información aquí consignada corresponde a la realidad de los hechos.
+
+V. NOTIFICACIONES
+
+Dirección: ${d.direccion}
+Correo electrónico: ${d.email}
+Teléfono: ${d.telefono}
+
+Atentamente,
+
+${d.nombre.toUpperCase()}
+C.C. ${d.cedula}
+Anexos: Copia del Derecho de Petición radicado y su comprobante de radicación.`;
+}
+
+// ════════════════════════════════════════════════════════
 // PAYMENT SERVICE
 // ════════════════════════════════════════════════════════
 function baseId(cedula, comparendo) {
@@ -1212,8 +1430,16 @@ function trackPurchase(docId) {
 let pollTimer   = null;
 let pollTimeout = null;
 
+// El diálogo de pago (#pay-dialog) es compartido entre el flujo principal
+// (petición/tutela/bundle) y el de devolución de dinero — esta bandera le
+// dice a sus botones "Ya pagué"/"Cancelar" a cuál de los dos flujos delegar.
+let activePayFlow = 'main'; // 'main' | 'dev'
+function dlgManualVerify() { return activePayFlow === 'dev' ? manualVerifyDev() : manualVerify(); }
+function dlgCancelPoll()   { return activePayFlow === 'dev' ? cancelPollDev()   : cancelPoll(); }
+
 function startPoll(docId) {
   stopPoll(); // limpiar cualquier poll anterior
+  activePayFlow = 'main';
   showPayDialog();
   pollTimer = setInterval(async () => {
     if (await isPaid(docId)) {
@@ -1661,10 +1887,16 @@ function renderPetition() {
       </div>
       <div style="font-size:13px;line-height:1.6;margin-bottom:14px">
         Tu fotomulta es de <strong>${esc(S.form.ciudad)}</strong> y fue impuesta el <strong>${esc(S.form.fecha)}</strong>,
-        dentro del rango que el Ministerio de Transporte y la Superintendencia de Transporte investigaron por
-        cámaras que sancionaron sin el "concepto de desempeño" del INM exigido por la Resolución 718 de 2018
+        dentro del período que el Ministerio de Transporte y la Superintendencia de Transporte confirmaron para
+        ese organismo (${organismoRevocatoriaPara(S.form.ciudad, S.form.fecha) ? fmtDate(new Date(organismoRevocatoriaPara(S.form.ciudad, S.form.fecha).desde+'T00:00:00')) + ' – ' + fmtDate(new Date(organismoRevocatoriaPara(S.form.ciudad, S.form.fecha).hasta+'T00:00:00')) : ''})
+        por cámaras que sancionaron sin el "concepto de desempeño" del INM exigido por la Resolución 718 de 2018
         y la Ley 2251 de 2022. Anunciaron la revocatoria de más de 5,8 millones de fotomultas impuestas por
-        37 organismos de tránsito entre el 10 de diciembre de 2018 y el 21 de noviembre de 2024.
+        37 organismos de tránsito entre el 10 de diciembre de 2018 y el 21 de noviembre de 2024 (el rango exacto
+        varía por organismo).
+      </div>
+      <div style="background:var(--success-bg);border-radius:10px;padding:12px;margin-bottom:14px;font-size:12.5px;line-height:1.5">
+        💰 <strong>¿Ya pagaste esta fotomulta?</strong> Es probable que también tengas derecho a que te devuelvan
+        el dinero. <a href="#" onclick="openDevolucion();return false;">Verifica tu devolución aquí</a>.
       </div>
       <div style="font-size:12px;color:var(--text2);line-height:1.6;background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:16px">
         <strong>Importante:</strong> el rango exacto de fechas cubierto varía por ciudad y organismo, y no hay
@@ -1958,9 +2190,393 @@ function showCrossSell() {
       Ver BorraMiDeuda →
     </a>`;
   // Insert after the result bar or at top of current screen content
-  const target = document.getElementById('petition-scroll') || document.querySelector('.screen.active') || document.body;
+  const target = document.getElementById('petition-scroll') || document.getElementById('dev-scroll') || document.querySelector('.screen.active') || document.body;
   target.prepend(el);
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ════════════════════════════════════════════════════════
+// DEVOLUCIÓN DE DINERO — fotomultas ya pagadas dentro de la
+// revocatoria masiva de mayo 2026. Estado y flujo separados
+// del de petición/tutela/bundle para no arriesgar ese flujo.
+// ════════════════════════════════════════════════════════
+const LS_KEY_DEV = 'mc_state_dev_v1';
+
+function saveDevState() {
+  try {
+    localStorage.setItem(LS_KEY_DEV, JSON.stringify({
+      form: SDEV.form, checked: SDEV.checked, eligible: SDEV.eligible, organismo: SDEV.organismo,
+      baseId: SDEV.baseId, pendingDoc: SDEV.pendingDocId, ts: Date.now(),
+    }));
+  } catch(e) { console.warn('saveDevState:', e); }
+}
+
+function restoreDevState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY_DEV);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    if (!saved?.baseId || !saved?.form?.cedula) return false;
+    if (Date.now() - (saved.ts || 0) > 7 * 86400 * 1000) return false;
+    Object.assign(SDEV, {
+      form: saved.form || {}, checked: saved.checked || false, eligible: saved.eligible || false,
+      organismo: saved.organismo || null, formSubmitted: true, baseId: saved.baseId,
+      pendingDocId: saved.pendingDoc || null,
+    });
+    return true;
+  } catch(e) { console.warn('restoreDevState:', e); return false; }
+}
+
+function openDevolucion() {
+  Object.assign(SDEV, {
+    checked: false, eligible: false, organismo: null, formSubmitted: false,
+    baseId: null, paid: false, doc: null, docIncump: null, paying: false, pendingDocId: null,
+  });
+  renderDevolucion();
+  showScreen('devolucion');
+}
+
+function checkDevEligibility() {
+  const g = id => document.getElementById(id)?.value?.trim() || '';
+  const v = { ciudad: g('dvci'), fecha: g('dvfec'), comparendo: g('dvco'), entidad: g('dvent') };
+  if (!v.ciudad || !v.fecha || !v.comparendo || !v.entidad) {
+    snack('Completa ciudad, fecha, comparendo y entidad', 'err'); return;
+  }
+  Object.assign(SDEV.form, v);
+  const organismo = organismoRevocatoriaPara(v.ciudad, v.fecha);
+  SDEV.checked   = true;
+  SDEV.eligible  = !!organismo;
+  SDEV.organismo = organismo;
+  saveDevState();
+  renderDevolucion();
+}
+
+function resetDevCheck() {
+  Object.assign(SDEV, { checked: false, eligible: false, organismo: null });
+  renderDevolucion();
+}
+
+async function submitDevForm() {
+  const g = id => document.getElementById(id)?.value?.trim() || '';
+  Object.assign(SDEV.form, {
+    nombre: g('dvn'), cedula: g('dvc'), direccion: g('dvd'), telefono: g('dvt'), email: g('dve'),
+    montoPagado: g('dvm'), fechaPago: g('dvfp'),
+  });
+  const d = SDEV.form;
+  const required = ['nombre','cedula','direccion','ciudad','telefono','email','comparendo','entidad','fecha','montoPagado','fechaPago'];
+  for (const k of required) {
+    if (!d[k]) { snack('Por favor completa todos los campos', 'err'); return; }
+  }
+  if (!d.email.includes('@')) { snack('Correo electrónico inválido', 'err'); return; }
+  if (!/\d/.test(d.cedula)) { snack('La cédula debe contener números', 'err'); return; }
+  if (!/\d/.test(d.comparendo)) { snack('El número de comparendo debe contener números', 'err'); return; }
+  if (!/\d/.test(d.montoPagado)) { snack('El monto pagado debe ser un número', 'err'); return; }
+
+  SDEV.baseId       = baseId(d.cedula, d.comparendo);
+  SDEV.formSubmitted = true;
+  saveDevState();
+  await checkDevPaid();
+}
+
+async function checkDevPaid() {
+  if (!SDEV.baseId) return;
+  SDEV.paid = await isPaid(SDEV.baseId + '_devolucion');
+  if (SDEV.paid && !SDEV.doc) {
+    SDEV.doc       = genDevolucion(SDEV.form);
+    SDEV.docIncump = genIncumplimiento(SDEV.form);
+  }
+  renderDevolucion();
+}
+
+async function payDev(docType) {
+  SDEV.paying = true; renderDevolucion();
+  try {
+    const docId = SDEV.baseId + '_' + docType;
+
+    const firmaRes = await fetch(WORKER_URL + '/firma', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ reference: docId }),
+    });
+    if (!firmaRes.ok) { snack('Error al preparar el pago. Intenta de nuevo.', 'err'); SDEV.paying = false; renderDevolucion(); return; }
+    const { ok, hash: sig, amountInCents: cents, error: firmaErr } = await firmaRes.json();
+    if (!ok || !sig || !cents) { snack(firmaErr || 'Error generando firma de pago.', 'err'); SDEV.paying = false; renderDevolucion(); return; }
+
+    const res   = await fetch(`https://production.wompi.co/v1/merchants/${WPUB}`);
+    const data  = await res.json();
+    const token = data?.data?.presigned_acceptance?.acceptance_token;
+    if (!token) { snack('Error al conectar con Wompi. Intenta de nuevo.', 'err'); SDEV.paying = false; renderDevolucion(); return; }
+
+    SDEV.pendingDocId = docId;
+    saveDevState();
+
+    const returnUrl = `${location.origin}${location.pathname}?mc_ref=${encodeURIComponent(docId)}`;
+    const checkoutUrl = `https://checkout.wompi.co/p/?` +
+      `public-key=${WPUB}&currency=COP&amount-in-cents=${cents}` +
+      `&reference=${docId}&signature:integrity=${sig}` +
+      `&acceptance-token=${token}` +
+      `&customer-data.email=${encodeURIComponent(SDEV.form.email)}` +
+      `&redirect-url=${encodeURIComponent(returnUrl)}`;
+
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 600;
+    if (isMobile) {
+      window.location.href = checkoutUrl;
+    } else {
+      window.open(checkoutUrl, '_blank');
+      SDEV.paying = false;
+      renderDevolucion();
+      startPollDev(docId);
+    }
+  } catch(e) {
+    snack('Error al procesar el pago: ' + e.message, 'err');
+    SDEV.paying = false;
+    renderDevolucion();
+  }
+}
+
+let devPollTimer = null, devPollTimeout = null;
+
+function startPollDev(docId) {
+  stopPollDev();
+  activePayFlow = 'dev';
+  showPayDialog();
+  devPollTimer = setInterval(async () => {
+    if (await isPaid(docId)) {
+      stopPollDev(); hidePayDialog();
+      await checkDevPaid();
+      snack('✅ ¡Pago confirmado! Tus documentos están listos.', 'ok');
+      trackPurchase(docId);
+      showCrossSell();
+    }
+  }, 3500);
+  devPollTimeout = setTimeout(() => {
+    if (devPollTimer) {
+      stopPollDev();
+      hidePayDialog();
+      snack('El tiempo venció. Si ya pagaste, usa "Ya pagué" para desbloquear.', 'warn');
+    }
+  }, 15 * 60 * 1000);
+}
+
+function stopPollDev() {
+  clearInterval(devPollTimer); devPollTimer = null;
+  clearTimeout(devPollTimeout); devPollTimeout = null;
+}
+
+function cancelPollDev() { stopPollDev(); hidePayDialog(); }
+
+async function manualVerifyDev() {
+  const el = document.getElementById('pay-dialog-title');
+  if (el) el.textContent = 'Verificando...';
+  const docId = SDEV.pendingDocId || (SDEV.baseId ? SDEV.baseId + '_devolucion' : null);
+  if (!docId) { snack('No hay pago pendiente registrado.', 'err'); return; }
+  const paid = await isPaid(docId);
+  if (paid) {
+    stopPollDev(); hidePayDialog();
+    await checkDevPaid();
+    snack('✅ ¡Pago confirmado! Tus documentos están listos.', 'ok');
+    trackPurchase(docId);
+    showCrossSell();
+  } else {
+    if (el) el.textContent = 'Verificando pago...';
+    snack('Aún no detectamos el pago. Si ya pagaste, espera unos segundos y vuelve a intentar.', 'warn');
+  }
+}
+
+function renderDevolucion() {
+  const el = document.getElementById('dev-scroll');
+  let h = '';
+
+  h += `<div class="grad-dark" style="border-radius:var(--rl);padding:26px;text-align:center;margin-bottom:26px">
+    <div style="width:60px;height:60px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v2m0 8v2M9.5 9.5a2.5 2 0 0 1 2.5-1.5c1.4 0 2.5.7 2.5 1.8s-1 1.7-2.5 2-2.5.9-2.5 2 1.1 1.8 2.5 1.8a2.5 2 0 0 0 2.5-1.5"/></svg>
+    </div>
+    <h2 style="color:white">¿Te deben devolver tu dinero?</h2>
+    <p style="color:rgba(255,255,255,.8);font-size:13px;margin-top:7px;line-height:1.5">
+      En mayo de 2026 el Gobierno confirmó que 37 organismos de tránsito impusieron fotomultas sin autorización del INM.
+      1,58 millones ya habían sido pagadas — por más de $1,05 billones que podrían devolverse.
+    </p>
+  </div>`;
+
+  if (!SDEV.checked) {
+    h += `<div class="section-title">Datos de tu fotomulta</div>
+    <div class="section-sub">Para verificar gratis si tu caso está cubierto</div>
+    <div class="card card-p" style="margin-bottom:22px">
+      <div class="form-grid-2">
+        <div class="field"><label>Ciudad / organismo *</label><input id="dvci" placeholder="Ej: Medellín" value="${esc(SDEV.form.ciudad||'')}"></div>
+        <div class="field"><label>Fecha de la fotomulta *</label><input id="dvfec" type="date" value="${esc(SDEV.form.fecha||'')}"></div>
+        <div class="field"><label>Número de comparendo *</label><input id="dvco" placeholder="Ej: 12345678" value="${esc(SDEV.form.comparendo||'')}"></div>
+        <div class="field" style="margin-bottom:0"><label>Entidad emisora *</label><input id="dvent" value="${esc(SDEV.form.entidad||'Secretaría de Movilidad')}"></div>
+      </div>
+    </div>
+    <button class="btn btn-black btn-lg" onclick="checkDevEligibility()">Verificar si aplica — gratis</button>
+    <p style="font-size:11px;color:var(--text2);line-height:1.6;text-align:center;margin-top:14px">
+      Solo cubre fotomultas de cámaras/radares dentro del período confirmado por organismo. Si tu caso no aplica,
+      igual puedes revisar otras irregularidades gratis con el cuestionario normal.
+    </p>`;
+
+  } else if (!SDEV.eligible) {
+    h += `<div class="card card-p" style="border:1.5px solid var(--border);margin-bottom:18px">
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px">Tu caso no está (todavía) en la ventana confirmada</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px">
+        Con los datos que diste, <strong>${esc(SDEV.form.entidad)}</strong> en <strong>${esc(SDEV.form.ciudad)}</strong> el
+        <strong>${esc(SDEV.form.fecha)}</strong> no coincide con ninguno de los períodos que el Gobierno confirmó hasta
+        ahora para este beneficio específico. Esto <strong>no</strong> significa que tu multa sea válida — puede tener
+        otras irregularidades.
+      </div>
+      <button class="btn btn-black" onclick="showScreen('type-selector')">Revisar otras irregularidades — gratis</button>
+      <button class="btn btn-outline" style="margin-top:9px" onclick="resetDevCheck()">Probar con otro comparendo</button>
+    </div>`;
+
+  } else if (!SDEV.formSubmitted) {
+    const o = SDEV.organismo;
+    h += `<div class="card card-p" style="border:1.5px solid var(--success);margin-bottom:22px">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:10px">
+        <div style="background:var(--success-bg);padding:9px;border-radius:10px;flex-shrink:0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div style="font-size:16px;font-weight:700">¡Tu caso está cubierto!</div>
+      </div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6">
+        ${esc(SDEV.form.entidad)} operó sin autorización del INM entre el ${fmtDateISO(o.desde)} y el ${fmtDateISO(o.hasta)} —
+        tu fotomulta del ${esc(SDEV.form.fecha)} cae dentro de ese período.
+      </div>
+    </div>
+    <div class="section-title">Tus datos personales</div>
+    <div class="card card-p" style="margin-bottom:18px">
+      <div class="form-grid-2">
+        <div class="field"><label>Nombre completo *</label><input id="dvn" placeholder="Ej: Juan Pérez García" value="${esc(SDEV.form.nombre||'')}"></div>
+        <div class="field"><label>Cédula de ciudadanía *</label><input id="dvc" placeholder="Ej: 1000123456" value="${esc(SDEV.form.cedula||'')}"></div>
+        <div class="field"><label>Dirección de residencia *</label><input id="dvd" placeholder="Ej: Calle 123 #45-67" value="${esc(SDEV.form.direccion||'')}"></div>
+        <div class="field"><label>Teléfono *</label><input id="dvt" placeholder="Ej: 3001234567" value="${esc(SDEV.form.telefono||'')}"></div>
+        <div class="field" style="margin-bottom:0"><label>Correo electrónico *</label><input id="dve" type="email" placeholder="correo@ejemplo.com" value="${esc(SDEV.form.email||'')}"></div>
+      </div>
+    </div>
+    <div class="section-title">Datos del pago</div>
+    <div class="section-sub">Deben coincidir con tu comprobante real — la entidad los verificará contra sus propios registros</div>
+    <div class="card card-p" style="margin-bottom:26px">
+      <div class="form-grid-2">
+        <div class="field"><label>Monto pagado (COP) *</label><input id="dvm" type="number" placeholder="Ej: 500000" value="${esc(SDEV.form.montoPagado||'')}"></div>
+        <div class="field" style="margin-bottom:0"><label>Fecha de pago *</label><input id="dvfp" type="date" value="${esc(SDEV.form.fechaPago||'')}"></div>
+      </div>
+    </div>
+    <button class="btn btn-black btn-lg" onclick="submitDevForm()">Generar mi Derecho de Petición</button>`;
+
+  } else {
+    h += `<div style="margin-bottom:14px">
+      <div class="section-title">Derecho de Petición de Devolución</div>
+      <div class="section-sub">Revocatoria + devolución de dinero, con copia a Supertransporte</div>
+    </div>`;
+
+    if (!SDEV.paid) {
+      h += `<div class="paywall-preview">
+        <div style="font-size:36px">🔒</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text2)">Vista previa bloqueada</div>
+        <div style="font-size:12px;color:#a1a1a6">Desbloquea para ver y descargar</div>
+      </div>
+      <div class="pay-card grad-purple" style="box-shadow:0 24px 60px -24px rgba(0,113,227,.4), inset 0 1px 0 rgba(255,255,255,.06)">
+        <div style="text-align:center">
+          <div style="width:52px;height:52px;background:rgba(0,113,227,.18);border:1px solid rgba(0,113,227,.35);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5ab0ff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h2 style="color:white;font-size:20px">Desbloquea tu documento</h2>
+          <p style="color:rgba(255,255,255,.6);font-size:13px;margin-top:7px;line-height:1.5">Incluye también la carta de incumplimiento, por si no te responden</p>
+        </div>
+        <div class="pay-price-box">
+          <div class="pay-price-lbl">Pago único</div>
+          <div class="pay-price-amt">${fmtPrice(PRICE_DEV)}</div>
+        </div>
+        <div class="pay-benefit">✓ Derecho de Petición de Revocatoria + Devolución</div>
+        <div class="pay-benefit">✓ Carta de incumplimiento incluida</div>
+        <div class="pay-benefit">✓ Descarga ilimitada</div>
+        <div class="pay-benefit">✓ Basado en el comunicado oficial de mayo 2026</div>
+        <div class="trust-box">
+          <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:9px">
+            <span>🛡️</span><span style="font-size:13px;font-weight:600;color:rgba(255,255,255,.9)">Pagos 100% seguros</span>
+          </div>
+          <div style="text-align:center;font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px">Procesado por Wompi (Bancolombia)</div>
+          <div style="text-align:center">
+            <span class="pay-badge">PSE</span><span class="pay-badge">Tarjeta</span>
+            <span class="pay-badge">Nequi</span><span class="pay-badge">Bancolombia</span>
+          </div>
+        </div>
+        <button class="btn" style="background:var(--accent);color:white;font-weight:600;height:52px;border-radius:999px" onclick="payDev('devolucion')" ${SDEV.paying?'disabled':''}>
+          ${SDEV.paying ? '<span class="spin-sm"></span> Procesando...' : 'Pagar de forma segura'}
+        </button>
+        <div style="text-align:center;margin-top:10px;font-size:11px;color:rgba(255,255,255,.5)">🔐 Encriptación SSL · Datos protegidos</div>
+        <div style="text-align:center;margin-top:8px;font-size:10.5px;color:rgba(255,255,255,.4);line-height:1.5">Al pagar aceptas la entrega inmediata del documento y renuncias a tu derecho de retracto (Art. 47 Ley 1480/2011). <a href="privacidad.html#reembolsos" target="_blank" style="color:rgba(255,255,255,.65)">Ver política de reembolsos</a></div>
+        <button class="btn" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.16);height:38px;border-radius:999px;font-size:12px;font-weight:600;margin-top:10px" onclick="manualVerifyDev()">
+          Ya pagué · Verificar pago
+        </button>
+      </div>`;
+
+    } else {
+      h += docBlock('Derecho de Petición – Devolución de Dinero', SDEV.doc, 'devolucion');
+
+      const pqrs = pqrsLinkPara(SDEV.form.ciudad);
+      h += `<div class="card card-p" style="margin-top:18px;margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px">
+          <div style="background:var(--success-bg);padding:9px;border-radius:10px;flex-shrink:0">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:700">Próximos pasos</div>
+            <div style="font-size:12px;color:var(--text2)">Así radicas tu solicitud correctamente</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Descarga el PDF</div>
+            <div class="step-sub">Usa el botón "⬇️ PDF" de arriba. Adjunta también tu comprobante de pago real de la multa — el documento lo pide como anexo.</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Radícalo ante la entidad</div>
+            <div class="step-sub">${pqrs
+              ? `Entra a <a href="${pqrs.url}" target="_blank" rel="noopener">${pqrs.nombre}</a>, crea tu solicitud tipo "Derecho de Petición" y adjunta el PDF, tu cédula y el comprobante de pago.`
+              : `Busca en Google "PQRS + ${esc(SDEV.form.entidad || 'nombre de tu entidad de tránsito')}" para encontrar su portal de radicación, o preséntalo en sus oficinas físicas. Adjunta el PDF, tu cédula y el comprobante de pago.`
+            }</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Envía copia a la Superintendencia de Transporte</div>
+            <div class="step-sub">Radica el mismo documento (o una copia) por su canal de PQRSDF en <a href="https://www.supertransporte.gov.co" target="_blank" rel="noopener">supertransporte.gov.co</a>, línea 018000915615 o WhatsApp 3185946666 — ya tienen a esta entidad bajo investigación, y tu caso se suma como evidencia.</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Guarda el radicado</div>
+            <div class="step-sub">Número de radicado, correo de confirmación o sello de recibido — anota también la fecha exacta en que lo presentaste, la vas a necesitar en el paso 5.</div>
+          </div>
+        </div>
+        <div class="step-row" style="padding-bottom:0">
+          <div class="step-num">5</div>
+          <div class="step-body" style="padding-bottom:0">
+            <div class="step-title">Si no responden en 15 días hábiles...</div>
+            <div class="step-sub">Usa la carta de incumplimiento que descargaste más abajo — complétala con la fecha y el número de radicado, y preséntala ante la Procuraduría o Personería de tu ciudad.</div>
+          </div>
+        </div>
+      </div>`;
+
+      h += `<div class="divider"></div>`;
+      h += docBlock('Queja por Incumplimiento de Términos', SDEV.docIncump, 'incump');
+      h += `<div class="card card-p" style="margin-top:4px;margin-bottom:18px">
+        <div style="font-size:13px;color:var(--text2);line-height:1.6">
+          ⚠️ <strong>Úsala solo si pasan más de 15 días hábiles</strong> desde que radicaste el documento anterior sin
+          respuesta. Antes de enviarla, completa a mano la fecha de radicación y el número de radicado (están marcados
+          entre corchetes en el texto).
+        </div>
+      </div>`;
+    }
+  }
+
+  el.innerHTML = h;
 }
 
 // ════════════════════════════════════════════════════════
@@ -2063,6 +2679,51 @@ async function init() {
   if (mcRef) {
     // Limpiar URL para que recargas futuras no re-disparen este flujo
     history.replaceState({}, '', location.pathname);
+
+    // El flujo de devolución de dinero tiene su propio estado y pantalla —
+    // se detecta por el sufijo del docId y se maneja aparte para no tocar
+    // la lógica del flujo principal (petición/tutela/bundle).
+    if (mcRef.endsWith('_devolucion')) {
+      const restoredDev = restoreDevState();
+      hideSplash();
+
+      if (restoredDev && SDEV.baseId) {
+        showScreen('devolucion');
+        renderDevolucion();
+
+        activePayFlow = 'dev';
+        showPayDialog();
+        const titleElDev = document.getElementById('pay-dialog-title');
+        const msgElDev    = document.getElementById('pay-dialog-msg');
+        if (msgElDev) msgElDev.textContent = 'Procesando tu pago... Esto toma unos segundos.';
+
+        let paidDev = false;
+        const maxRetriesDev = 8;
+        for (let i = 0; i < maxRetriesDev; i++) {
+          if (i > 0) {
+            if (titleElDev) titleElDev.textContent = `Verificando pago... (${i}/${maxRetriesDev - 1})`;
+            await new Promise(r => setTimeout(r, 2500));
+          }
+          paidDev = await isPaid(mcRef);
+          if (paidDev) break;
+        }
+        hidePayDialog();
+
+        if (paidDev) {
+          await checkDevPaid();
+          snack('✅ ¡Pago confirmado! Tus documentos están listos.', 'ok');
+          trackPurchase(mcRef);
+          showCrossSell();
+        } else {
+          snack('Verificando pago... si ya pagaste presiona "Ya pagué".', 'warn');
+          startPollDev(mcRef);
+        }
+      } else {
+        snack('Sesión expirada. Vuelve a verificar tu devolución.', 'warn');
+        showScreen('home');
+      }
+      return;
+    }
 
     // Restaurar estado guardado
     const restored = restoreState();
